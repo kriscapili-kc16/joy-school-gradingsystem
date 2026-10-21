@@ -137,9 +137,9 @@
         </button>
       </form>
       
-      <!-- <div class="bg-gray-50 p-3 text-center border-t text-[11px] text-gray-500">
+      <div class="bg-gray-50 p-3 text-center border-t text-[11px] text-gray-500">
         Default Teacher PIN: <span class="font-bold text-gray-700">1234</span> | Admin PIN: <span class="font-bold text-gray-700">admin123</span>
-      </div> -->
+      </div>
     </div>
   </div>
 
@@ -149,7 +149,7 @@
       JOY SCHOOL
     </div>
     <h1 class="text-3xl md:text-5xl font-extrabold text-black tracking-tight mb-2">
-      G7 - G12 JS Grading System
+      G7 - G11 JS Grading System
     </h1>
     
     <div class="flex flex-wrap items-center justify-center gap-4 text-gray-700 font-medium text-lg">
@@ -676,7 +676,7 @@
       <form id="add-student-form" onsubmit="handleSaveStudent(event)" class="p-6 space-y-4">
         <div>
           <label class="block text-xs font-bold uppercase text-gray-600 mb-1">Full Name</label>
-          <input type="text" id="new-student-name" required placeholder="e.g. Princess" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#1EB354] outline-none">
+          <input type="text" id="new-student-name" required placeholder="e.g. Princess Sophea" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#1EB354] outline-none">
         </div>
         
         <div class="grid grid-cols-2 gap-3">
@@ -713,15 +713,15 @@
 
   <!-- JAVASCRIPT LOGIC -->
   <script>
-    const firebaseConfig = {
-    apiKey: "AIzaSyDjUQUpZta3qjLduBaeVeYDiI11A0D-_sw",
-    authDomain: "joy-school-grading-6f8db.firebaseapp.com",
-    projectId: "joy-school-grading-6f8db",
-    storageBucket: "joy-school-grading-6f8db.firebasestorage.app",
-    messagingSenderId: "756120037221",
-    appId: "1:756120037221:web:5f2db08c83f22c1dd2638c",
-    measurementId: "G-B4S3777RT5"
-    };
+  const firebaseConfig = {
+  const firebaseConfig = {
+  apiKey: "YOUR_FIREBASE_API_KEY",
+  authDomain: "your-app.firebaseapp.com",
+  projectId: "your-app-id",
+  storageBucket: "your-app.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcdef"
+  };
 
     let db = null;
     let isCloudConnected = false;
@@ -752,7 +752,8 @@
     let teachersData = [
       { name: "Teacher Kris", passkey: "1234", classes: ["7A", "8A", "8B", "9A"] },
       { name: "Teacher Sophea", passkey: "1234", classes: ["7B", "8C", "9B", "9C"] },
-      { name: "Teacher Dara", passkey: "1234", classes: ["10A", "11A"] }
+      { name: "Teacher Dara", passkey: "1234", classes: ["10A", "11A"] },
+      { name: "Teacher Jona", passkey: "1234", classes: ["11A"] }
     ];
 
     // Sample Students with Sections
@@ -802,20 +803,14 @@
 
     // --- SYSTEM INITIALIZATION & LOGIN ---
     function initSystem() {
-      // Restore Class Codes List
+      // Restore Local Settings Backup
       const savedClasses = localStorage.getItem('joy_school_class_codes');
       if (savedClasses) {
         try { allClassCodes = JSON.parse(savedClasses); } catch(e){}
-      } else {
-        localStorage.setItem('joy_school_class_codes', JSON.stringify(allClassCodes));
       }
-
-      // Restore Teachers Database
       const savedTeachers = localStorage.getItem('joy_school_teachers_db');
       if (savedTeachers) {
         try { teachersData = JSON.parse(savedTeachers); } catch(e){}
-      } else {
-        localStorage.setItem('joy_school_teachers_db', JSON.stringify(teachersData));
       }
 
       populateTeacherLoginDropdown();
@@ -844,6 +839,8 @@
         if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "YOUR_API_KEY") {
           firebase.initializeApp(firebaseConfig);
           db = firebase.firestore();
+
+          // 1. Sync Students Collection
           db.collection("students").onSnapshot((snapshot) => {
             if (!snapshot.empty) {
               studentsData = snapshot.docs.map(doc => doc.data());
@@ -854,6 +851,36 @@
             updateSyncStatus(true, "Cloud Sync Active");
             renderStudentTable();
           }, () => updateSyncStatus(false, "Offline Local Mode"));
+
+          // 2. Sync Teachers Accounts Real-time Across Devices
+          db.collection("teachers").onSnapshot((snapshot) => {
+            if (!snapshot.empty) {
+              teachersData = snapshot.docs.map(doc => doc.data());
+              localStorage.setItem('joy_school_teachers_db', JSON.stringify(teachersData));
+              populateTeacherLoginDropdown();
+              applyUserPermissions();
+              if (!document.getElementById('admin-modal').classList.contains('hidden')) {
+                renderAdminTeachersTable();
+              }
+            } else {
+              teachersData.forEach(t => db.collection("teachers").doc(t.name.replace(/\s+/g, '_')).set(t));
+            }
+          });
+
+          // 3. Sync Class Codes Real-time Across Devices
+          db.collection("system_settings").doc("class_codes").onSnapshot((doc) => {
+            if (doc.exists && doc.data().codes) {
+              allClassCodes = doc.data().codes;
+              localStorage.setItem('joy_school_class_codes', JSON.stringify(allClassCodes));
+              applyUserPermissions();
+              if (!document.getElementById('admin-modal').classList.contains('hidden')) {
+                renderAdminTeachersTable();
+              }
+            } else {
+              db.collection("system_settings").doc("class_codes").set({ codes: allClassCodes });
+            }
+          });
+
         } else {
           updateSyncStatus(false, "Local Storage Mode");
         }
@@ -1010,6 +1037,20 @@
       }
     }
 
+    function syncTeachersToCloud(teacher) {
+      localStorage.setItem('joy_school_teachers_db', JSON.stringify(teachersData));
+      if (db && isCloudConnected && teacher) {
+        db.collection("teachers").doc(teacher.name.replace(/\s+/g, '_')).set(teacher).catch(err => console.error(err));
+      }
+    }
+
+    function syncClassCodesToCloud() {
+      localStorage.setItem('joy_school_class_codes', JSON.stringify(allClassCodes));
+      if (db && isCloudConnected) {
+        db.collection("system_settings").doc("class_codes").set({ codes: allClassCodes }).catch(err => console.error(err));
+      }
+    }
+
     function calculateGWA(scoresObj) {
       if (!scoresObj) return 0;
       let total = 0, count = 0;
@@ -1062,7 +1103,7 @@
       }
 
       allClassCodes.push(code);
-      localStorage.setItem('joy_school_class_codes', JSON.stringify(allClassCodes));
+      syncClassCodesToCloud();
 
       document.getElementById('admin-new-class-grade').value = '';
       document.getElementById('admin-new-class-section').value = '';
@@ -1075,13 +1116,15 @@
     function adminDeleteClass(code) {
       if (confirm(`Remove Class Section "${code}" from system?`)) {
         allClassCodes = allClassCodes.filter(c => c !== code);
-        localStorage.setItem('joy_school_class_codes', JSON.stringify(allClassCodes));
+        syncClassCodesToCloud();
 
         // Clean permissions from teachers
         teachersData.forEach(t => {
-          if (t.classes) t.classes = t.classes.filter(c => c !== code);
+          if (t.classes) {
+            t.classes = t.classes.filter(c => c !== code);
+            syncTeachersToCloud(t);
+          }
         });
-        localStorage.setItem('joy_school_teachers_db', JSON.stringify(teachersData));
 
         applyUserPermissions();
         renderAdminTeachersTable();
@@ -1135,7 +1178,7 @@
       } else {
         teachersData[teacherIdx].classes = teachersData[teacherIdx].classes.filter(c => c !== classCode);
       }
-      localStorage.setItem('joy_school_teachers_db', JSON.stringify(teachersData));
+      syncTeachersToCloud(teachersData[teacherIdx]);
     }
 
     function adminAddTeacher() {
@@ -1145,9 +1188,11 @@
       if (!name) { alert("Please enter a teacher name."); return; }
 
       const defaultClass = allClassCodes[0] || "7A";
-      teachersData.push({ name: name, passkey: pin, classes: [defaultClass] });
-      localStorage.setItem('joy_school_teachers_db', JSON.stringify(teachersData));
+      const newTeacher = { name: name, passkey: pin, classes: [defaultClass] };
+      teachersData.push(newTeacher);
       
+      syncTeachersToCloud(newTeacher);
+
       document.getElementById('admin-new-teacher-name').value = '';
       document.getElementById('admin-new-teacher-pin').value = '';
 
@@ -1156,9 +1201,13 @@
     }
 
     function adminDeleteTeacher(idx) {
-      if (confirm(`Remove teacher account "${teachersData[idx].name}"?`)) {
+      const teacherToDelete = teachersData[idx];
+      if (confirm(`Remove teacher account "${teacherToDelete.name}"?`)) {
         teachersData.splice(idx, 1);
         localStorage.setItem('joy_school_teachers_db', JSON.stringify(teachersData));
+        if (db && isCloudConnected && teacherToDelete) {
+          db.collection("teachers").doc(teacherToDelete.name.replace(/\s+/g, '_')).delete().catch(err => console.error(err));
+        }
         renderAdminTeachersTable();
         populateTeacherLoginDropdown();
       }
