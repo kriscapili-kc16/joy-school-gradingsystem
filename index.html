@@ -137,9 +137,9 @@
         </button>
       </form>
       
-      <!-- <div class="bg-gray-50 p-3 text-center border-t text-[11px] text-gray-500">
+      <div class="bg-gray-50 p-3 text-center border-t text-[11px] text-gray-500">
         Default Teacher PIN: <span class="font-bold text-gray-700">1234</span> | Admin PIN: <span class="font-bold text-gray-700">admin123</span>
-      </div> -->
+      </div>
     </div>
   </div>
 
@@ -1522,7 +1522,7 @@
       document.getElementById('class-rank-modal').classList.add('hidden');
     }
 
-    // --- FORM 3: BATCH ALL INDIVIDUAL REPORTS (PDF SINGLE SHEET LAYOUT) ---
+    // --- FORM 3: BATCH ALL INDIVIDUAL REPORTS (AUTOMATED SEM1 / SEM2 & GWA COMPUTATION) ---
     function openBatchIndividualReportsModal() {
       populateClassSelectDropdowns();
       document.getElementById('batch-class-select').value = currentClassTab;
@@ -1552,9 +1552,64 @@
       }
 
       filtered.forEach((student) => {
-        const qScores = (student.scores && student.scores[currentQuarter]) ? student.scores[currentQuarter] : {};
-        const gwa = calculateGWA(qScores);
         const comment = (student.comments && student.comments[currentQuarter]) ? student.comments[currentQuarter] : 'No comments provided for this term.';
+
+        // Calculate exact SEM1, SEM2, and final quarter score averages
+        const calculatedSubjects = subjectList.map((sub) => {
+          const q1 = (student.scores && student.scores['Q1'] && student.scores['Q1'][sub.code] !== undefined) ? Number(student.scores['Q1'][sub.code]) : null;
+          const q2 = (student.scores && student.scores['Q2'] && student.scores['Q2'][sub.code] !== undefined) ? Number(student.scores['Q2'][sub.code]) : null;
+          const q3 = (student.scores && student.scores['Q3'] && student.scores['Q3'][sub.code] !== undefined) ? Number(student.scores['Q3'][sub.code]) : null;
+          const q4 = (student.scores && student.scores['Q4'] && student.scores['Q4'][sub.code] !== undefined) ? Number(student.scores['Q4'][sub.code]) : null;
+
+          // SEM1 Calculation (Avg of Q1 & Q2)
+          let sem1 = null;
+          if (q1 !== null && q2 !== null) {
+            sem1 = Math.round((q1 + q2) / 2);
+          } else if (q1 !== null) {
+            sem1 = q1;
+          } else if (q2 !== null) {
+            sem1 = q2;
+          }
+
+          // SEM2 Calculation (Avg of Q3 & Q4)
+          let sem2 = null;
+          if (q3 !== null && q4 !== null) {
+            sem2 = Math.round((q3 + q4) / 2);
+          } else if (q3 !== null) {
+            sem2 = q3;
+          } else if (q4 !== null) {
+            sem2 = q4;
+          }
+
+          // Effective Subject AVG for selected term
+          let finalAvg = null;
+          if (currentQuarter === 'Q1') {
+            finalAvg = q1;
+          } else if (currentQuarter === 'Q2') {
+            finalAvg = sem1 !== null ? sem1 : q2;
+          } else if (currentQuarter === 'Q3') {
+            if (sem1 !== null && q3 !== null) finalAvg = Math.round((sem1 + q3) / 2);
+            else finalAvg = q3 !== null ? q3 : sem1;
+          } else if (currentQuarter === 'Q4') {
+            if (sem1 !== null && sem2 !== null) finalAvg = Math.round((sem1 + sem2) / 2);
+            else finalAvg = sem2 !== null ? sem2 : sem1;
+          }
+
+          return {
+            ...sub,
+            q1: q1 !== null ? q1 : '--',
+            q2: q2 !== null ? q2 : '--',
+            sem1: sem1 !== null ? sem1 : '--',
+            q3: q3 !== null ? q3 : '--',
+            q4: q4 !== null ? q4 : '--',
+            sem2: sem2 !== null ? sem2 : '--',
+            finalAvg: finalAvg !== null ? finalAvg : '--'
+          };
+        });
+
+        // Compute overall student GWA for current term
+        const validAvgs = calculatedSubjects.filter(s => s.finalAvg !== '--').map(s => Number(s.finalAvg));
+        const gwa = validAvgs.length > 0 ? Math.round(validAvgs.reduce((a, b) => a + b, 0) / validAvgs.length) : 0;
 
         const card = document.createElement('div');
         card.className = "p-4 sm:p-6 border rounded-xl bg-white shadow-sm space-y-3 page-break";
@@ -1586,28 +1641,28 @@
                 <th class="p-1.5 border text-left">SUBJECTS</th>
                 <th class="p-1.5 border">Q1</th>
                 <th class="p-1.5 border">Q2</th>
-                <th class="p-1.5 border">SEM1</th>
+                <th class="p-1.5 border bg-blue-100 text-blue-900">SEM1</th>
                 <th class="p-1.5 border">Q3</th>
                 <th class="p-1.5 border">Q4</th>
-                <th class="p-1.5 border">SEM2</th>
+                <th class="p-1.5 border bg-orange-100 text-orange-900">SEM2</th>
                 <th class="p-1.5 border bg-gray-200">AVG</th>
               </tr>
             </thead>
             <tbody>
-              ${subjectList.map((sub, sIdx) => `
+              ${calculatedSubjects.map((sub, sIdx) => `
                 <tr class="border-b text-center">
                   <td class="p-1 border font-bold">${sIdx + 1}</td>
                   <td class="p-1 border text-left">
                     <div class="font-bold text-[11px]">${sub.kh}</div>
                     <div class="text-gray-500 text-[10px]">${sub.en}</div>
                   </td>
-                  <td class="p-1 border font-semibold">${(student.scores && student.scores['Q1']) ? student.scores['Q1'][sub.code] || '--' : '--'}</td>
-                  <td class="p-1 border font-semibold">${(student.scores && student.scores['Q2']) ? student.scores['Q2'][sub.code] || '--' : '--'}</td>
-                  <td class="p-1 border text-gray-400">--</td>
-                  <td class="p-1 border font-semibold">${(student.scores && student.scores['Q3']) ? student.scores['Q3'][sub.code] || '--' : '--'}</td>
-                  <td class="p-1 border font-semibold">${(student.scores && student.scores['Q4']) ? student.scores['Q4'][sub.code] || '--' : '--'}</td>
-                  <td class="p-1 border text-gray-400">--</td>
-                  <td class="p-1 border font-bold bg-gray-50">${qScores[sub.code] || '--'}</td>
+                  <td class="p-1 border font-semibold">${sub.q1}</td>
+                  <td class="p-1 border font-semibold">${sub.q2}</td>
+                  <td class="p-1 border font-bold bg-blue-50/60 text-blue-900">${sub.sem1}</td>
+                  <td class="p-1 border font-semibold">${sub.q3}</td>
+                  <td class="p-1 border font-semibold">${sub.q4}</td>
+                  <td class="p-1 border font-bold bg-orange-50/60 text-orange-900">${sub.sem2}</td>
+                  <td class="p-1 border font-extrabold bg-gray-100">${sub.finalAvg}</td>
                 </tr>
               `).join('')}
             </tbody>
