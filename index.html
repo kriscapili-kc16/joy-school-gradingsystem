@@ -137,9 +137,9 @@
         </button>
       </form>
       
-      <!-- <div class="bg-gray-50 p-3 text-center border-t text-[11px] text-gray-500">
+      <div class="bg-gray-50 p-3 text-center border-t text-[11px] text-gray-500">
         Default Teacher PIN: <span class="font-bold text-gray-700">1234</span> | Admin PIN: <span class="font-bold text-gray-700">admin123</span>
-      </div> -->
+      </div>
     </div>
   </div>
 
@@ -359,10 +359,10 @@
           </div>
         </div>
 
-        <!-- Assign Class Sections Table -->
+        <!-- Assign Class Sections Table with Editable Passkeys -->
         <div>
           <h4 class="font-bold text-xs text-gray-700 uppercase mb-2">Teacher Class & Section Permissions Matrix</h4>
-          <p class="text-xs text-gray-500 mb-3">Check the exact class sections each teacher is permitted to access and manage.</p>
+          <p class="text-xs text-gray-500 mb-3">Check permitted class sections and edit teacher passkeys directly below.</p>
           <div class="overflow-x-auto border rounded-lg">
             <table class="w-full text-xs text-left border-collapse">
               <thead id="admin-teachers-thead">
@@ -398,7 +398,7 @@
         <button onclick="closeGradebook()" class="text-white hover:text-gray-200 text-2xl font-bold px-2">&times;</button>
       </div>
 
-      <!-- Dynamic Class Tabs (Scoped by Teacher Permissions) -->
+      <!-- Dynamic Class Tabs (Scoped by Teacher Permissions & Sorted Numerically) -->
       <div id="gradebook-tabs-container" class="bg-gray-100 px-4 py-2 flex space-x-2 border-b overflow-x-auto">
         <!-- JS Populated Class Tabs -->
       </div>
@@ -735,6 +735,21 @@
     // Master List of System Class Codes (Persisted & Dynamic)
     let allClassCodes = ["7A", "7B", "8A", "8B", "8C", "9A", "9B", "9C", "10A", "11A"];
 
+    // NATURAL NUMERICAL & ALPHABETICAL SORTER FUNCTION
+    function sortClassCodes(arr) {
+      if (!arr || !Array.isArray(arr)) return [];
+      return [...arr].sort((a, b) => {
+        const numA = parseInt(a.replace(/\D/g, ''), 10) || 0;
+        const numB = parseInt(b.replace(/\D/g, ''), 10) || 0;
+        if (numA !== numB) {
+          return numA - numB;
+        }
+        const secA = a.replace(/[^A-Za-z]/g, '');
+        const secB = b.replace(/[^A-Za-z]/g, '');
+        return secA.localeCompare(secB);
+      });
+    }
+
     const subjectList = [
       { code: "EL", kh: "ភាសាអង់គ្លេសទូទៅ", en: "General English" },
       { code: "GR", kh: "អក្ខរាវិរុទ្ធ", en: "Grammar" },
@@ -806,11 +821,17 @@
       // Restore Local Settings Backup
       const savedClasses = localStorage.getItem('joy_school_class_codes');
       if (savedClasses) {
-        try { allClassCodes = JSON.parse(savedClasses); } catch(e){}
+        try { allClassCodes = sortClassCodes(JSON.parse(savedClasses)); } catch(e){}
+      } else {
+        allClassCodes = sortClassCodes(allClassCodes);
       }
+
       const savedTeachers = localStorage.getItem('joy_school_teachers_db');
       if (savedTeachers) {
-        try { teachersData = JSON.parse(savedTeachers); } catch(e){}
+        try { 
+          teachersData = JSON.parse(savedTeachers);
+          teachersData.forEach(t => { if (t.classes) t.classes = sortClassCodes(t.classes); });
+        } catch(e){}
       }
 
       populateTeacherLoginDropdown();
@@ -855,7 +876,11 @@
           // 2. Sync Teachers Accounts Real-time Across Devices
           db.collection("teachers").onSnapshot((snapshot) => {
             if (!snapshot.empty) {
-              teachersData = snapshot.docs.map(doc => doc.data());
+              teachersData = snapshot.docs.map(doc => {
+                const data = doc.data();
+                if (data.classes) data.classes = sortClassCodes(data.classes);
+                return data;
+              });
               localStorage.setItem('joy_school_teachers_db', JSON.stringify(teachersData));
               populateTeacherLoginDropdown();
               applyUserPermissions();
@@ -870,7 +895,7 @@
           // 3. Sync Class Codes Real-time Across Devices
           db.collection("system_settings").doc("class_codes").onSnapshot((doc) => {
             if (doc.exists && doc.data().codes) {
-              allClassCodes = doc.data().codes;
+              allClassCodes = sortClassCodes(doc.data().codes);
               localStorage.setItem('joy_school_class_codes', JSON.stringify(allClassCodes));
               applyUserPermissions();
               if (!document.getElementById('admin-modal').classList.contains('hidden')) {
@@ -895,9 +920,10 @@
       const select = document.getElementById('login-teacher-select');
       select.innerHTML = '';
       teachersData.forEach(t => {
+        const sortedClasses = sortClassCodes(t.classes || []);
         const opt = document.createElement('option');
         opt.value = t.name;
-        opt.innerText = `${t.name} (Classes: ${t.classes ? t.classes.join(', ') : 'None'})`;
+        opt.innerText = `${t.name} (Classes: ${sortedClasses.length > 0 ? sortedClasses.join(', ') : 'None'})`;
         select.appendChild(opt);
       });
     }
@@ -951,15 +977,17 @@
       const avatarIcon = document.getElementById('user-avatar-icon');
       const adminBtn = document.getElementById('admin-panel-btn');
 
+      allClassCodes = sortClassCodes(allClassCodes);
+
       if (currentUserRole === 'admin') {
-        activeAllowedClasses = [...allClassCodes];
+        activeAllowedClasses = sortClassCodes([...allClassCodes]);
         badge.className = "text-xs font-bold px-2.5 py-0.5 rounded-full border mt-1 bg-purple-100 text-purple-800 border-purple-300";
         badge.innerHTML = `<i class="fa-solid fa-shield-halved text-[8px] mr-1"></i>Administrator`;
         avatarIcon.className = "fa-solid fa-user-shield text-7xl text-white mt-4";
         adminBtn.classList.remove('hidden');
       } else {
         const tObj = teachersData.find(t => t.name === activeTeacherName);
-        activeAllowedClasses = (tObj && tObj.classes && tObj.classes.length > 0) ? tObj.classes : (allClassCodes[0] ? [allClassCodes[0]] : ["7A"]);
+        activeAllowedClasses = (tObj && tObj.classes && tObj.classes.length > 0) ? sortClassCodes(tObj.classes) : (allClassCodes[0] ? [allClassCodes[0]] : ["7A"]);
         badge.className = "text-xs font-bold px-2.5 py-0.5 rounded-full border mt-1 bg-green-50 text-green-700 border-green-200";
         badge.innerHTML = `<i class="fa-solid fa-circle text-[8px] mr-1"></i>Active Educator`;
         avatarIcon.className = "fa-solid fa-user-tie text-7xl text-white mt-4";
@@ -1045,6 +1073,7 @@
     }
 
     function syncClassCodesToCloud() {
+      allClassCodes = sortClassCodes(allClassCodes);
       localStorage.setItem('joy_school_class_codes', JSON.stringify(allClassCodes));
       if (db && isCloudConnected) {
         db.collection("system_settings").doc("class_codes").set({ codes: allClassCodes }).catch(err => console.error(err));
@@ -1103,6 +1132,7 @@
       }
 
       allClassCodes.push(code);
+      allClassCodes = sortClassCodes(allClassCodes);
       syncClassCodesToCloud();
 
       document.getElementById('admin-new-class-grade').value = '';
@@ -1135,10 +1165,13 @@
       const thead = document.getElementById('admin-teachers-thead');
       const tbody = document.getElementById('admin-teachers-tbody');
 
+      allClassCodes = sortClassCodes(allClassCodes);
+
       if (thead) {
         thead.innerHTML = `
           <tr class="bg-gray-800 text-white text-center">
             <th class="p-2.5 border text-left">Teacher Name</th>
+            <th class="p-2.5 border">Passkey / PIN</th>
             ${allClassCodes.map(c => `<th class="p-2 border">${c}</th>`).join('')}
             <th class="p-2 border">Actions</th>
           </tr>
@@ -1149,10 +1182,14 @@
         tbody.innerHTML = '';
         teachersData.forEach((t, idx) => {
           if (!t.classes) t.classes = [];
+          t.classes = sortClassCodes(t.classes);
           const tr = document.createElement('tr');
           tr.className = "border-b hover:bg-gray-50 text-center";
           tr.innerHTML = `
             <td class="p-2 border text-left font-bold text-gray-800">${t.name}</td>
+            <td class="p-2 border">
+              <input type="text" value="${t.passkey || '1234'}" onchange="updateTeacherPasskey(${idx}, this.value)" class="w-20 text-center border rounded px-1.5 py-1 font-mono text-xs font-bold text-purple-800 bg-purple-50 focus:ring-2 focus:ring-purple-600 outline-none">
+            </td>
             ${allClassCodes.map(c => `
               <td class="p-2 border">
                 <input type="checkbox" ${t.classes.includes(c) ? 'checked' : ''} onchange="toggleTeacherClassPermission(${idx}, '${c}', this.checked)" class="w-4 h-4 text-purple-600 rounded cursor-pointer">
@@ -1171,6 +1208,18 @@
       renderAdminClassManagementList();
     }
 
+    function updateTeacherPasskey(teacherIdx, newPasskey) {
+      const trimmed = newPasskey.trim();
+      if (!trimmed) {
+        alert("Passkey cannot be empty.");
+        renderAdminTeachersTable();
+        return;
+      }
+      teachersData[teacherIdx].passkey = trimmed;
+      syncTeachersToCloud(teachersData[teacherIdx]);
+      populateTeacherLoginDropdown();
+    }
+
     function toggleTeacherClassPermission(teacherIdx, classCode, isChecked) {
       if (!teachersData[teacherIdx].classes) teachersData[teacherIdx].classes = [];
       if (isChecked) {
@@ -1178,7 +1227,9 @@
       } else {
         teachersData[teacherIdx].classes = teachersData[teacherIdx].classes.filter(c => c !== classCode);
       }
+      teachersData[teacherIdx].classes = sortClassCodes(teachersData[teacherIdx].classes);
       syncTeachersToCloud(teachersData[teacherIdx]);
+      applyUserPermissions();
     }
 
     function adminAddTeacher() {
@@ -1617,7 +1668,7 @@
       document.getElementById('new-student-id').value = Math.floor(100000 + Math.random() * 900000);
       
       const classSelect = document.getElementById('new-student-class-select');
-      classSelect.innerHTML = activeAllowedClasses.map(c => {
+      classSelect.innerHTML = sortClassCodes(activeAllowedClasses).map(c => {
         const gradeNum = c.slice(0, -1);
         const sec = c.slice(-1);
         return `<option value="${c}">Grade ${gradeNum} - Section ${sec} (${c})</option>`;
