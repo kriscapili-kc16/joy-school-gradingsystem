@@ -31,3 +31,7 @@ A responsive, real-time web application engineered for managing student academic
 
 1. Clone or download this repository.
 2. Open `index.html` directly in any modern web browser.
+
+## User Account:
+1. Username: Admin , Password: admin123
+2. Any teacher account password: 1234
