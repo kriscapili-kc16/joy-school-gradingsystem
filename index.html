@@ -4,15 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>JOY SCHOOL - Academic System</title>
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
+  <!-- Firebase Compatibility SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
   
-  <link rel="stylesheet" href="css/styles.css">
-  <script src="js/app.js"></script>
-  
+ <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="min-h-screen flex flex-col items-center p-4 md:p-8">
 
@@ -21,8 +22,8 @@
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100">
       
       <div class="bg-[#E66723] p-6 text-center text-white relative">
-        <div class="w-20 h-20 bg-white rounded-full mx-auto mb-2 flex items-center justify-center shadow-lg border-2 border-orange-200">
-          <span class="font-extrabold text-[#2B72B8] text-xl">JOY</span>
+        <div class="w-24 h-24 bg-white rounded-full mx-auto mb-2 flex items-center justify-center shadow-lg border-2 border-orange-200 overflow-hidden">
+          <img src="logo.png" alt="Joy School Logo" class="w-full h-full object-cover">
         </div>
         <h2 class="text-2xl font-extrabold tracking-tight">JOY SCHOOL</h2>
         <p class="text-xs text-orange-100 uppercase tracking-widest font-semibold mt-1">Academic System Login</p>
@@ -57,7 +58,9 @@
         </button>
       </form>
       
-     
+      <div class="bg-gray-50 p-3 text-center border-t text-[11px] text-gray-500">
+        Default Teacher PIN: <span class="font-bold text-gray-700">1234</span> | Admin PIN: <span class="font-bold text-gray-700">admin123</span>
+      </div>
     </div>
   </div>
 
@@ -87,19 +90,10 @@
   <!-- MAIN DASHBOARD CONTENT -->
   <main id="main-dashboard" class="w-full max-w-6xl grid grid-cols-1 md:grid-cols-12 gap-6 no-print">
     
-    <!-- LEFT PANEL -->
+    <!-- LEFT PANEL LOGO WIDGET -->
     <div class="md:col-span-3 flex flex-col items-center justify-center p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
-      <div class="w-48 h-48 rounded-full border-4 border-[#1EB354]/20 p-2 flex items-center justify-center bg-white shadow-inner mb-4">
-        <svg viewBox="0 0 200 200" class="w-full h-full">
-          <circle cx="100" cy="100" r="90" fill="none" stroke="#1EB354" stroke-width="4" stroke-dasharray="6,4"/>
-          <path d="M 30,100 A 70,70 0 0,1 170,100" fill="none" stroke="#E66723" stroke-width="5"/>
-          <text x="100" y="45" font-size="12" font-weight="bold" fill="#E66723" text-anchor="middle">JOY SCHOOL CAMBODIA</text>
-          <circle cx="75" cy="105" r="16" fill="none" stroke="#2B72B8" stroke-width="3"/>
-          <path d="M 75,121 L 75,150 M 60,135 L 90,135 M 65,165 L 75,150 L 85,165" stroke="#2B72B8" stroke-width="3" fill="none"/>
-          <circle cx="125" cy="105" r="16" fill="none" stroke="#E66723" stroke-width="3"/>
-          <path d="M 125,121 L 125,150 M 110,135 L 140,135 M 115,165 L 125,150 L 135,165" stroke="#E66723" stroke-width="3" fill="none"/>
-          <text x="100" y="180" font-size="15" font-weight="extrabold" fill="#E66723" text-anchor="middle">Joy School</text>
-        </svg>
+      <div class="w-48 h-48 rounded-full border-4 border-[#1EB354]/20 p-1 flex items-center justify-center bg-white shadow-inner mb-4 overflow-hidden">
+        <img src="logo.png" alt="Joy School Logo" class="w-full h-full object-cover rounded-full">
       </div>
       <p class="text-xs text-center text-gray-500 font-medium mb-3">Official Academic Grading Portal</p>
       
@@ -242,7 +236,6 @@
       
       <div class="p-6 overflow-y-auto space-y-6">
         
-        <!-- Admin Management Forms Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Add New Teacher Form -->
           <div class="bg-purple-50 p-4 rounded-xl border border-purple-200">
@@ -277,7 +270,7 @@
           </div>
         </div>
 
-        <!-- Assign Class Sections Table with Editable Passkeys -->
+        <!-- Assign Class Sections Table -->
         <div>
           <h4 class="font-bold text-xs text-gray-700 uppercase mb-2">Teacher Class & Section Permissions Matrix</h4>
           <p class="text-xs text-gray-500 mb-3">Check permitted class sections and edit teacher passkeys directly below.</p>
@@ -316,7 +309,6 @@
         <button onclick="closeGradebook()" class="text-white hover:text-gray-200 text-2xl font-bold px-2">&times;</button>
       </div>
 
-      <!-- Dynamic Class Tabs (Scoped by Teacher Permissions & Sorted Numerically) -->
       <div id="gradebook-tabs-container" class="bg-gray-100 px-4 py-2 flex space-x-2 border-b overflow-x-auto">
         <!-- JS Populated Class Tabs -->
       </div>
@@ -423,8 +415,8 @@
         
         <div class="text-center">
           <div class="flex items-center justify-center space-x-3 mb-1">
-            <div class="w-12 h-12 rounded-full border border-green-600 flex items-center justify-center">
-              <span class="text-xs font-extrabold text-blue-600">JOY</span>
+            <div class="w-14 h-14 rounded-full border border-green-600 flex items-center justify-center overflow-hidden">
+              <img src="logo.png" alt="Joy School Logo" class="w-full h-full object-cover">
             </div>
             <div>
               <h2 class="text-xl font-bold text-red-700 font-serif">សាលាខ្មែរ-ចិន អេសប្រាយសិក្សា</h2>
@@ -507,9 +499,16 @@
       <div id="rank-print-container" class="p-6 overflow-y-auto space-y-4 printable-area">
         
         <div class="text-center">
-          <h2 class="text-xl font-bold text-red-700 font-serif">សាលាខ្មែរ-ចិន អេសប្រាយសិក្សា</h2>
-          <h3 class="text-lg font-extrabold text-black">JOY SCHOOL</h3>
-          <p class="text-sm font-semibold text-gray-800">Class Rank</p>
+          <div class="flex items-center justify-center space-x-3 mb-1">
+            <div class="w-14 h-14 rounded-full border border-green-600 flex items-center justify-center overflow-hidden">
+              <img src="logo.png" alt="Joy School Logo" class="w-full h-full object-cover">
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-red-700 font-serif">សាលាខ្មែរ-ចិន អេសប្រាយសិក្សា</h2>
+              <h3 class="text-lg font-extrabold text-black">JOY SCHOOL</h3>
+              <p class="text-sm font-semibold text-gray-800">Class Rank</p>
+            </div>
+          </div>
         </div>
 
         <div class="bg-gray-100 p-3 rounded text-xs grid grid-cols-2 gap-2 font-semibold">
@@ -549,7 +548,7 @@
     </div>
   </div>
 
-  <!-- FORM 3: BATCH ALL INDIVIDUAL REPORTS (COMBINED PDF) MODAL -->
+  <!-- FORM 3: BATCH ALL INDIVIDUAL REPORTS MODAL -->
   <div id="batch-reports-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-2 md:p-6 printable-modal">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden printable-modal">
       
@@ -611,7 +610,6 @@
           </div>
         </div>
 
-        <!-- PERMISSION-SCOPED CLASS DROPDOWN -->
         <div>
           <label class="block text-xs font-bold uppercase text-gray-600 mb-1">Target Class & Section</label>
           <select id="new-student-class-select" required class="w-full px-3 py-2.5 border rounded-lg font-bold text-blue-700 bg-blue-50/50 focus:ring-2 focus:ring-[#1EB354] outline-none">
@@ -629,6 +627,6 @@
     </div>
   </div>
 
- 
+ <script src="js/api.js"></script>
 </body>
 </html>
